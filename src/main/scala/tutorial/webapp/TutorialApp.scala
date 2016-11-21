@@ -10,12 +10,15 @@ object TutorialApp extends JSApp {
   import PrBuilderVis._
 
   def main(): Unit = {
-    val (renderedRepos: List[TimeLineRenderer]) = reposFixture.zipWithIndex.map{case (repo, index) => {
+    val (renderedRepos: List[(RepoRenderer, TimeLineRenderer)]) = reposFixture.zipWithIndex.map{case (repo, index) => {
       val max = 4000.0
       val min = 0.0
-      val timeline = new TimeLineRenderer(min, max, repo, 800.0, 100.0, index)
+      val height = 100.0
+      val timeline = new TimeLineRenderer(min, max, repo, 800.0, height, index)
+      val repoRenderer = new RepoRenderer(repo, height, index)
+      repoRenderer.render
       timeline.render
-      timeline
+      (repoRenderer, timeline)
     }}
   }
 }
@@ -23,6 +26,25 @@ object TutorialApp extends JSApp {
 object PrBuilderVis {
   import PrBuilderData._
   import DOM._
+
+  class RepoRenderer(repo: Repo, height: Double, offset: Int) extends DOM {
+    def render: ChildDOMNode = {
+      val top = (offset*height).toString
+      val buttonStyle = Map(
+        "position" -> "absolute",
+        "background" -> "whitesmoke",
+        "color" -> "darkbrown",
+        "height" -> "75px",
+        "width" -> "150px",
+        "left" -> "5px",
+        "top" -> (top+"px")
+      )
+      val repoButton = createElement("div", None, None, Some(buttonStyle))
+      val textNode = document.createTextNode(repo.name)
+      modifyParent(textNode, Some(repoButton))(append)
+      modifyParent(repoButton)(append)
+    }
+  }
 
 
   class TimeLineRenderer(minTS: Double, maxTS: Double, repo: Repo, width: Double, height: Double, offsetTop: Int) extends DOM {
@@ -32,11 +54,11 @@ object PrBuilderVis {
 
     def sToPx(ms: Int): Double = ms*pxPerS
 
-    def render: List[dom.raw.Element] = repo.builds.map { build =>
-      modifyParent(createDot(build), None)(append)
+    def render: List[ChildDOMNode] = repo.builds.map { build =>
+      modifyParent(createDot(build))(append)
     }
 
-    def createDot(build: Build, d: DOM = this): dom.raw.Element = {
+    def createDot(build: Build, d: DOM = this): ChildDOMNode = {
       val success = build.details.success
       val background = success match {
         case true => "green"
@@ -44,10 +66,10 @@ object PrBuilderVis {
       }
 
       val left = sToPx(build.details.created)
-      val top = offsetTop*height
+      val top = offsetTop * height
       val inlineStyle = Map(
-        "top" -> (top.toString+"px"),
-        "left" -> (left.toString+"px"),
+        "top" -> (top.toString + "px"),
+        "left" -> (left.toString + "px"),
         "background" -> background,
         "height" -> "10px",
         "width" -> "10px",
@@ -55,9 +77,8 @@ object PrBuilderVis {
         "display" -> "inline-block",
         "position" -> "absolute"
       )
-      d.createElement("div", Some(List("dot")), None, Some(inlineStyle))
+      createElement("div", Some(List("dot")), None, Some(inlineStyle))
     }
-
   }
 }
 
@@ -91,7 +112,8 @@ object PrBuilderData {
     def addBuild(newBuild: Build): Unit
   }
 
-  class Repo(name: String) extends BaseRepo {
+  class Repo(repoName: String) extends BaseRepo {
+    val name = repoName
     var builds = List[Build]()
     def updateBuilds(newBuild: Build): Unit = {
       builds = builds.map(build => {
@@ -110,7 +132,8 @@ object PrBuilderData {
 object DOM {
 
   class DOM {
-    type DOMModifier = (dom.raw.Element, Option[dom.raw.Element]) => dom.raw.Element
+    type ChildDOMNode = dom.raw.Node
+    type DOMModifier = (ChildDOMNode, Option[dom.raw.Element]) => ChildDOMNode
 
     def elementById[A <: dom.Node](id: String): A =
       document.getElementById(id).asInstanceOf[A]
@@ -138,25 +161,17 @@ object DOM {
       element
     }
 
-    def modifyParent(child: dom.raw.Element, parent: Option[dom.raw.Element])(modifier: DOMModifier): dom.raw.Element = {
+    def modifyParent(child: ChildDOMNode, parent: Option[dom.raw.Element] = Some(document.body))(modifier: DOMModifier): ChildDOMNode = {
       modifier(child, parent)
     }
 
-    def append(child: dom.raw.Element, parent: Option[dom.raw.Element]): dom.raw.Element = {
-      if (parent.isDefined) {
-        parent foreach { p => p.appendChild(child) }
-      } else {
-        document.body.appendChild(child)
-      }
+    def append(child: ChildDOMNode, parent: Option[dom.raw.Element] = Some(document.body)): ChildDOMNode = {
+      parent foreach { p => p.appendChild(child) }
       child
     }
 
-    def remove(child: dom.raw.Element, parent: Option[dom.raw.Element]): dom.raw.Element = {
-      if (parent.isDefined) {
-        parent foreach { p => p.removeChild(child) }
-      } else {
-        document.body.removeChild(child)
-      }
+    def remove(child: ChildDOMNode, parent: Option[dom.raw.Element] = Some(document.body)): ChildDOMNode = {
+      parent foreach { p => p.removeChild(child) }
       child
     }
 
