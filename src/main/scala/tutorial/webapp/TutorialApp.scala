@@ -4,33 +4,113 @@ import scala.scalajs.js
 import org.scalajs.dom
 import dom.document
 import scala.scalajs.js.JSApp
-import org.scalajs.dom.html
 
 object TutorialApp extends JSApp {
+  import PrBuilderData._
   import PrBuilderVis._
 
   def main(): Unit = {
-    appendPar(document.body, "hello world")
-    val d = new DOM()
-    val div = d.createElement("div", None, Some("cat"))
-    d.modifyParent(div, None)(d.append)
-    d.modifyParent(div, None)(d.remove)
-  }
-
-  def appendPar(targetNode: dom.Node, text: String): Unit = {
-    val parNode = document.createElement("p")
-    val textNode = document.createTextNode(text)
-    parNode.appendChild(textNode)
-    targetNode.appendChild(parNode)
+    val (renderedRepos: List[TimeLineRenderer]) = reposFixture.zipWithIndex.map{case (repo, index) => {
+      val max = 4000.0
+      val min = 0.0
+      val timeline = new TimeLineRenderer(min, max, repo, 800.0, 100.0, index)
+      timeline.render
+      timeline
+    }}
   }
 }
 
 object PrBuilderVis {
   import PrBuilderData._
+  import DOM._
+
+
+  class TimeLineRenderer(minTS: Double, maxTS: Double, repo: Repo, width: Double, height: Double, offsetTop: Int) extends DOM {
+    //render each dot on the timeline for this repo
+    //minTS and maxTS are over all min and max timestamps for all visualized repos
+    val pxPerS = width/(maxTS-minTS)
+
+    def sToPx(ms: Int): Double = ms*pxPerS
+
+    def render: List[dom.raw.Element] = repo.builds.map { build =>
+      modifyParent(createDot(build), None)(append)
+    }
+
+    def createDot(build: Build, d: DOM = this): dom.raw.Element = {
+      val success = build.details.success
+      val background = success match {
+        case true => "green"
+        case false => "red"
+      }
+
+      val left = sToPx(build.details.created)
+      val top = offsetTop*height
+      val inlineStyle = Map(
+        "top" -> (top.toString+"px"),
+        "left" -> (left.toString+"px"),
+        "background" -> background,
+        "height" -> "10px",
+        "width" -> "10px",
+        "border-radius" -> "5px",
+        "display" -> "inline-block",
+        "position" -> "absolute"
+      )
+      d.createElement("div", Some(List("dot")), None, Some(inlineStyle))
+    }
+
+  }
+}
+
+object PrBuilderData {
+  var reposFixture = List(new Repo("repo1"), new Repo("hello world"), new Repo("mySexyRepo"))
+  val buildDetails = List(
+    BuildDetails(true, 1000),
+    BuildDetails(false, 2000),
+    BuildDetails(true, 3000)
+  )
+
+  val buildsFixture = buildDetails.map(bd => Build(math.random().toString(), "build_name", "https://google.com", bd))
+  reposFixture = reposFixture.map(r => {
+    buildsFixture.foreach(build => {
+      r.addBuild(build)
+    })
+    r
+  })
+
+
+  type RepoName = String
+
+  case class BuildDetails(success: Boolean, created: Int)
+  case class Build(id: String, name: String, link: String, details: BuildDetails)
+  case class Repos(repos: List[Repo])
+
+  trait BaseRepo {
+    var builds: Builds
+    type Builds = List[Build]
+    def updateBuilds(newBuild: Build): Unit
+    def addBuild(newBuild: Build): Unit
+  }
+
+  class Repo(name: String) extends BaseRepo {
+    var builds = List[Build]()
+    def updateBuilds(newBuild: Build): Unit = {
+      builds = builds.map(build => {
+        if (build.id == newBuild.id) newBuild
+        else build
+      })
+    }
+
+    def addBuild(newBuild: Build): Unit = {
+      builds = newBuild :: builds
+    }
+  }
+
+}
+
+object DOM {
 
   class DOM {
-    //  example use:  val textArea = elementById[html.TextArea](textAreaID)
-    type DOMModifier = (dom.raw.Element, Option[dom.raw.Element]) => Unit
+    type DOMModifier = (dom.raw.Element, Option[dom.raw.Element]) => dom.raw.Element
 
     def elementById[A <: dom.Node](id: String): A =
       document.getElementById(id).asInstanceOf[A]
@@ -38,94 +118,48 @@ object PrBuilderVis {
     def elementByClass[A <: dom.Node](className: String): A =
       document.getElementsByClassName(className).asInstanceOf[A]
 
-    def createElement(elementTag: String, classNames: Option[List[String]], id: Option[String]): dom.raw.Element = {
+    def createElement(elementTag: String, classNames: Option[List[String]], id: Option[String], style: Option[Map[String, String]]): dom.raw.Element = {
       var element = document.createElement(elementTag)
 
-      if (classNames.isDefined) {
-        val className = classNames.mkString(" ")
-        element.setAttribute("class", className)
+      classNames foreach { cns =>
+          val classes = cns.mkString(" ")
+          element.setAttribute("class", classes)
       }
 
-      if (id.isDefined) {
-        id foreach {
-          i => element.setAttribute("id", i)
-        }
+      id foreach {
+        i => element.setAttribute("id", i)
+      }
+
+      style foreach { s =>
+        val totalStyle = s.foldLeft("") { case (styleString, (k, v)) => styleString + s"$k: $v;" }
+        element.setAttribute("style", totalStyle)
       }
 
       element
     }
 
-    def modifyParent(child: dom.raw.Element, parent: Option[dom.raw.Element])(modifier: DOMModifier): Unit = {
+    def modifyParent(child: dom.raw.Element, parent: Option[dom.raw.Element])(modifier: DOMModifier): dom.raw.Element = {
       modifier(child, parent)
     }
 
-    def append(child: dom.raw.Element, parent: Option[dom.raw.Element]): Unit = {
+    def append(child: dom.raw.Element, parent: Option[dom.raw.Element]): dom.raw.Element = {
       if (parent.isDefined) {
         parent foreach { p => p.appendChild(child) }
       } else {
         document.body.appendChild(child)
       }
+      child
     }
 
-    def remove(child: dom.raw.Element, parent: Option[dom.raw.Element]): Unit = {
+    def remove(child: dom.raw.Element, parent: Option[dom.raw.Element]): dom.raw.Element = {
       if (parent.isDefined) {
         parent foreach { p => p.removeChild(child) }
       } else {
         document.body.removeChild(child)
       }
+      child
     }
 
-  }
-
-  class TimeLineRenderer(minTS: Int, maxTS: Int, repo: Repo, width: Int, height: Int) extends DOM {
-    //render each dot on the timeline for this repo
-    //minTS and maxTS are over all min and max timestamps for all visualized repos
-    //timestamps are in ms TODO maybe we can make that part of the time stamp type
-
-    def render(repo: Repo): Unit = {
-      repo.builds.foreach {
-          case Build(id, name, link, created, buildDetails) =>
-            id
-      }
-    }
-
-  }
-}
-
-object PrBuilderData {
-  type RepoName = String
-
-  case class BuildDetails(details: Map[String, Any]) //TODO this is not a thing yet
-  case class Build(id: String, name: String, link: String, created: Int, buildDetails: BuildDetails)
-  case class Repos(repos: List[Repo])
-
-  trait BaseRepo {
-    type Builds = List[Build]
-    def updateBuild(newBuild: Build): Unit
-    var builds: Builds
-  }
-
-  class Repo extends BaseRepo {
-    var builds = List[Build]()
-    def updateBuild(newBuild: Build): Unit = {
-      builds = builds.zipWithIndex.foldLeft(List[Build]())((builds, buildTuple) => {
-        var nextBuilds = List[Build]()
-
-        buildTuple match {
-          case (b, index) =>
-            if (b.id == newBuild.id) {
-              nextBuilds = newBuild :: builds
-            } else if (index == builds.length - 1) {
-              //append to acc
-              nextBuilds = b :: newBuild :: builds
-            } else {
-              nextBuilds = b :: builds
-            }
-        }
-
-        nextBuilds
-      })
-    }
   }
 
 }
