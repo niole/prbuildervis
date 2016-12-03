@@ -10,15 +10,13 @@ object TutorialApp extends JSApp {
   import PrBuilderVis._
 
   def main(): Unit = {
-    val (renderedRepos: List[(RepoRenderer, TimeLineRenderer)]) = reposFixture.zipWithIndex.map{case (repo, index) => {
+    val (renderedRepos: List[RepoRenderer]) = reposFixture.zipWithIndex.map{case (repo, index) => {
       val max = 4000.0
       val min = 0.0
       val height = 100.0
-      val timeline = new TimeLineRenderer(min, max, repo, 800.0, height, index)
-      val repoRenderer = new RepoRenderer(repo, height, index)
+      val repoRenderer = new RepoRenderer(repo, 800.0, height, min, max, index)
       repoRenderer.render
-      timeline.render
-      (repoRenderer, timeline)
+      repoRenderer
     }}
   }
 }
@@ -27,38 +25,75 @@ object PrBuilderVis {
   import PrBuilderData._
   import DOM._
 
-  class RepoRenderer(repo: Repo, height: Double, offset: Int) extends DOM {
+  class RepoRenderer(repo: Repo, width: Double, height: Double, min: Double, max: Double, offset: Int) extends DOM {
+    var timeline = new TimeLineRenderer(min, max, repo, 800.0, height, offset)
+
     def render: ChildDOMNode = {
       val top = (offset*height).toString
       val buttonStyle = Map(
         "position" -> "absolute",
         "background" -> "whitesmoke",
         "color" -> "darkbrown",
-        "height" -> "75px",
-        "width" -> "150px",
-        "left" -> "5px",
+        "padding" -> "5px 15px",
+        "border-radius" -> "2px",
+        "left" -> "15px",
         "top" -> (top+"px")
       )
       val repoButton = createElement("div", None, None, Some(buttonStyle))
       val textNode = document.createTextNode(repo.name)
+
+      timeline.render
       modifyParent(textNode, Some(repoButton))(append)
       modifyParent(repoButton)(append)
     }
   }
 
+  class Dot(style: Map[String, String]) extends DOM {
+    val dot = createElement("div", Some(List("dot")), None, Some(style))
+    dot.addEventListener("mouseenter", { (e: dom.MouseEvent) =>
+      showTestData(dot)
+    })
+
+    dot.addEventListener("mouseleave", { (e: dom.MouseEvent) =>
+      hideTestData(dot)
+    })
+
+    def showTestData(dot: ChildDOMNode): Unit = {
+      println("enter")
+    }
+
+    def hideTestData(dot: ChildDOMNode): Unit = {
+      println("leave")
+    }
+
+    def remove: Unit = {
+      modifyParent(dot)(remove)
+    }
+
+    def get: ChildDOMNode = dot
+  }
 
   class TimeLineRenderer(minTS: Double, maxTS: Double, repo: Repo, width: Double, height: Double, offsetTop: Int) extends DOM {
     //render each dot on the timeline for this repo
     //minTS and maxTS are over all min and max timestamps for all visualized repos
+    var renderedTimeLine = List[DOM]()
+
     val pxPerS = width/(maxTS-minTS)
 
     def sToPx(ms: Int): Double = ms*pxPerS
 
-    def render: List[ChildDOMNode] = repo.builds.map { build =>
-      modifyParent(createDot(build))(append)
+    val dots = List[Dot]()
+
+    def render: List[DOM] = {
+      renderedTimeLine = repo.builds.map { build =>
+        val dot = createDot(build)
+        modifyParent(dot.get)(append)
+        dot
+      }
+      renderedTimeLine
     }
 
-    def createDot(build: Build, d: DOM = this): ChildDOMNode = {
+    def createDot(build: Build): Dot = {
       val success = build.details.success
       val background = success match {
         case true => "green"
@@ -66,7 +101,7 @@ object PrBuilderVis {
       }
 
       val left = sToPx(build.details.created)
-      val top = offsetTop * height
+      val top = offsetTop * height + 7
       val inlineStyle = Map(
         "top" -> (top.toString + "px"),
         "left" -> (left.toString + "px"),
@@ -77,7 +112,8 @@ object PrBuilderVis {
         "display" -> "inline-block",
         "position" -> "absolute"
       )
-      createElement("div", Some(List("dot")), None, Some(inlineStyle))
+
+      new Dot(inlineStyle)
     }
   }
 }
