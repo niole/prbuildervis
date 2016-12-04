@@ -1,6 +1,6 @@
 package TimelineComponent
 
-import DOMShortcuts.DOM.DOM
+import DOMShortcuts.Shortcuts.DOM
 import DotComponent.Dot
 import PRBuilder.Data.{Build, Repo}
 

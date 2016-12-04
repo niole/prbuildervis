@@ -1,7 +1,7 @@
 package RepoComponent
 
 import TimelineComponent._
-import DOMShortcuts.DOM._
+import DOMShortcuts.Shortcuts._
 import PRBuilder.Data.Repo
 
 object Renderer {

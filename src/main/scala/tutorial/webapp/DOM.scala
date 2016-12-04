@@ -3,7 +3,7 @@ package DOMShortcuts
 import org.scalajs.dom
 import org.scalajs.dom._
 
-object DOM {
+object Shortcuts {
   type DOMNode = dom.raw.Node
   type DOMModifier = (DOMNode, Option[DOMNode]) => DOMNode
 

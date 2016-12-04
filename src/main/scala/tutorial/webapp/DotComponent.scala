@@ -1,7 +1,7 @@
 package DotComponent
 
 import PRBuilder.Data._
-import DOMShortcuts.DOM.{DOM, NodeSpec, _}
+import DOMShortcuts.Shortcuts._
 import org.scalajs.dom
 
 trait DotDOM extends DOM {
