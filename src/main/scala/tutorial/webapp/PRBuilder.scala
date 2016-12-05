@@ -1,5 +1,13 @@
 package PRBuilder
 
+object State {
+
+  case class ActiveRepos(names: List[String])
+
+  case class State(activeRepos: ActiveRepos)
+
+}
+
 object Data {
   var reposFixture = List(new Repo("repo1"), new Repo("hello world"), new Repo("mySexyRepo"))
   val buildDetails = List(
