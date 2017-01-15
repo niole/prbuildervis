@@ -3,17 +3,18 @@ package RepoComponent
 import TimelineComponent._
 import DOMShortcuts.Shortcuts._
 import PRBuilder.Data.Repo
+import Store.Store._
 
 object Renderer {
 
   trait RepoDOM extends DOM {
     def render: DOMNode
-
     def remove: Unit
   }
 
-  class RepoRenderer(repo: Repo, width: Double, height: Double, min: Double, max: Double, offset: Int) extends DOM with RepoDOM {
-    var timeline = new TimeLineRenderer(min, max, repo, 800.0, height, offset)
+  class RepoRenderer(repo: Repo, width: Double, height: Double, min: Double, max: Double, offset: Int, store: Store)
+    extends DOM with RepoDOM {
+    var timeline = new TimeLineRenderer(min, max, repo, 800.0, height, offset, store)
     var renderedRepo = createElement(NodeSpec("span"))
 
     def render: DOMNode = {

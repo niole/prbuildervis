@@ -2,33 +2,6 @@ package Actions
 
 import PRBuilder.State._
 
-abstract class SemiGroup[A] {
-  def add(x: A, y: A): A
-}
-abstract class Monoid[A] extends SemiGroup[A] {
-  def unit: A
-}
-
-object ImplicitTest extends App {
-
-  implicit object StringMonoid extends Monoid[String] {
-    def add(x: String, y: String): String = x concat y
-    def unit: String = ""
-  }
-  implicit object IntMonoid extends Monoid[Int] {
-    def add(x: Int, y: Int): Int = x + y
-    def unit: Int = 0
-  }
-
-  def sum[A](xs: List[A])(implicit m: Monoid[A]): A =
-  if (xs.isEmpty) m.unit
-  else m.add(xs.head, sum(xs.tail))
-
-  println(sum(List(1, 2, 3)))          // uses IntMonoid implicitly
-  println(sum(List("a", "b", "c")))    // uses StringMonoid implicitly
-}
-
-
 object All {
   abstract class Action[T] {
     def update[S](state: State, nextState: T, nextStateType: S): State
@@ -36,7 +9,7 @@ object All {
     def remove[S](state: State, nextState: T, nextStateType: S): State
   }
 
-  implicit object X extends Action[List[String]] {
+  implicit object ListStringAction extends Action[List[String]] {
 
     def update[S](state: State, nextState: List[String], nextStateType: S): State = nextStateType match {
       case ActiveRepos(_) =>
@@ -63,6 +36,8 @@ object All {
     }
   }
 
+  //updates relevant field in state with value
+  //uses whole current state, next state value type, and next state value
   def update[T, S](state: State, nextState: T, nextStateType: S)(implicit action: Action[T]): State =
     action.update[S](state, nextState, nextStateType)
 

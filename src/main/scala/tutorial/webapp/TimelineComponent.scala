@@ -3,6 +3,7 @@ package TimelineComponent
 import DOMShortcuts.Shortcuts.DOM
 import DotComponent.Dot
 import PRBuilder.Data.{Build, Repo}
+import Store.Store._
 
 trait TimeLineDOM {
   def sToPx(ms: Int): Double
@@ -11,7 +12,8 @@ trait TimeLineDOM {
   def createDot(build: Build): Dot
 }
 
-class TimeLineRenderer(minTS: Double, maxTS: Double, repo: Repo, width: Double, height: Double, offsetTop: Int) extends DOM with TimeLineDOM {
+class TimeLineRenderer(minTS: Double, maxTS: Double, repo: Repo, width: Double, height: Double, offsetTop: Int, store: Store)
+  extends DOM with TimeLineDOM {
   //render each dot on the timeline for this repo
   //minTS and maxTS are over all min and max timestamps for all visualized repos
   var renderedTimeLine = List[Dot]()

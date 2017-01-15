@@ -7,20 +7,29 @@ object Shortcuts {
   type DOMNode = dom.raw.Node
   type DOMModifier = (DOMNode, Option[DOMNode]) => DOMNode
 
+  type Tag = String
+  type ClassName = Option[String]
+  type Id = Option[String]
+  type Style = Option[Map[String, String]]
+  type Children = Option[List[DOMNode]]
+  type DomHandlers = Option[Map[String, (Any) => Unit]]
+
   trait BaseNodeSpec {
-    val tag: String
-    val className: Option[String]
-    val id: Option[String]
-    val style: Option[Map[String, String]]
-    val children: Option[List[DOMNode]]
+    val tag: Tag
+    val className: ClassName
+    val id: Id
+    val style: Style
+    val children: Children
+    val domHandlers: DomHandlers
   }
 
   case class NodeSpec(
-                       override val tag: String,
-                       override val children: Option[List[DOMNode]] = None,
-                       override val className: Option[String] = None,
-                       override val id: Option[String] = None,
-                       override val style: Option[Map[String, String]] = None
+                       override val tag: Tag,
+                       override val children: Children = None,
+                       override val className: ClassName = None,
+                       override val id: Id = None,
+                       override val style: Style = None,
+                       override val domHandlers: DomHandlers = None
                      ) extends BaseNodeSpec
 
   class DOM {
